@@ -113,7 +113,7 @@ export const albumsData = [
         bgColor:"#744210"
     }
 ]
-
+///
 export const songsData = [
     {
         id:0,

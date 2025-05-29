@@ -1,5 +1,5 @@
 import { createContext, useEffect, useRef, useState } from "react";
-import { songsData } from "../assets/assets";
+import axios from "axios"; // thêm axios để fetch dữ liệu
 
 export const PlayerContext = createContext();
 
@@ -8,12 +8,41 @@ const PlayerContextProvider = (props) => {
   const seekBg = useRef();
   const seekBar = useRef();
 
-  const [track, setTrack] = useState(songsData[1]);
+  const [songs, setSongs] = useState([]);
+  const [albums, setAlbums] = useState([]);
+  const [track, setTrack] = useState(null);
   const [playStatus, setPlayStatus] = useState(false);
   const [time, setTime] = useState({
     currentTime: { second: 0, minute: 0 },
     totalTime: { second: 0, minute: 0 },
   });
+
+  // Fetch albums and songs from backend
+useEffect(() => {
+  const fetchData = () => {
+    axios.get("http://localhost:4000/api/album/list")
+      .then((response) => {
+        setAlbums(response.data);
+      })
+      .catch((error) => {
+        console.warn("Không kết nối được server album, dùng mock data.");
+        setAlbums(mockAlbums);
+      });
+
+    axios.get("http://localhost:4000/api/song/list")
+      .then((response) => {
+        setSongs(response.data);
+        setTrack(response.data[0]); // chọn bài hát đầu tiên
+      })
+      .catch((error) => {
+        console.warn("Không kết nối được server song, dùng mock data.");
+        setSongs(mockSongs);
+        setTrack(mockSongs[0]);
+      });
+  };
+
+  fetchData();
+}, []);
 
   const play = () => {
     audioRef.current.play();
@@ -25,21 +54,19 @@ const PlayerContextProvider = (props) => {
     setPlayStatus(false);
   };
 
-  // Khi thay đổi track chỉ setTrack thôi
   const playWithId = (id) => {
-    setTrack(songsData[id]);
+    const song = songs.find((s) => s._id === id);
+    if (song) setTrack(song);
   };
 
   const previous = () => {
-    if (track.id > 0) {
-      setTrack(songsData[track.id - 1]);
-    }
+    const index = songs.findIndex((s) => s._id === track?._id);
+    if (index > 0) setTrack(songs[index - 1]);
   };
 
   const next = () => {
-    if (track.id < songsData.length - 1) {
-      setTrack(songsData[track.id + 1]);
-    }
+    const index = songs.findIndex((s) => s._id === track?._id);
+    if (index < songs.length - 1) setTrack(songs[index + 1]);
   };
 
   const seekSong = (e) => {
@@ -47,25 +74,18 @@ const PlayerContextProvider = (props) => {
     audioRef.current.currentTime = percent * audioRef.current.duration;
   };
 
-  // Effect này chạy khi track thay đổi, sẽ load lại audio và play khi sẵn sàng
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !track) return;
 
-    // Tải lại track
+    audio.src = track.file;
     audio.load();
 
-    // Khi audio sẵn sàng phát thì gọi play()
     const onCanPlay = () => {
-      audio.play().catch((err) => {
-        console.warn("Playback error:", err);
-      });
+      audio.play().catch((err) => console.warn("Playback error:", err));
       setPlayStatus(true);
     };
 
-    audio.addEventListener("canplay", onCanPlay);
-
-    // Xử lý update thanh seek và thời gian
     const handleTimeUpdate = () => {
       if (audio.duration) {
         seekBar.current.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
@@ -81,9 +101,10 @@ const PlayerContextProvider = (props) => {
         });
       }
     };
+
+    audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("timeupdate", handleTimeUpdate);
 
-    // Cleanup event listeners khi component unmount hoặc track thay đổi
     return () => {
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("timeupdate", handleTimeUpdate);
@@ -106,11 +127,13 @@ const PlayerContextProvider = (props) => {
     previous,
     next,
     seekSong,
+    albums,
+    songs,
   };
 
   return (
     <PlayerContext.Provider value={contextValue}>
-      <audio ref={audioRef} src={track.file} />
+      <audio ref={audioRef} />
       {props.children}
     </PlayerContext.Provider>
   );
