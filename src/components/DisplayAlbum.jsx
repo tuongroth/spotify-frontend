@@ -1,15 +1,29 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import { useParams } from 'react-router-dom';
-import { albumsData, assets, songsData } from '../assets/assets';
 import { PlayerContext } from '../context/PlayContext';
 
 const DisplayAlbum = () => {
   const { id } = useParams();
-  const album= albumsData.find(album => String(album.id) === id);
   const { setTrack } = useContext(PlayerContext);
+  const [album, setAlbum] = useState(null);
+  const [songs, setSongs] = useState([]);
 
-  if (!album) return <p>Album not found</p>;
+  useEffect(() => {
+    // Fetch album info by id
+    fetch(`http://localhost:4000/api/album/${id}`) // backend cần có route lấy album theo id
+      .then(res => res.json())
+      .then(data => setAlbum(data))
+      .catch(err => console.error(err));
+
+    // Fetch songs in album
+    fetch(`http://localhost:4000/api/song/list?albumId=${id}`) // backend cần hỗ trợ filter song theo albumId
+      .then(res => res.json())
+      .then(data => setSongs(data))
+      .catch(err => console.error(err));
+  }, [id]);
+
+  if (!album) return <p>Loading album...</p>;
 
   return (
     <>
@@ -21,30 +35,23 @@ const DisplayAlbum = () => {
           <h2 className="text-5xl font-bold mb-4 md:text-7xl">{album.name}</h2>
           <h4>{album.desc}</h4>
           <p className="mt-1">
-            <img
-              className="inline-block w-5"
-              src={assets.spotify_logo}
-              alt="Spotify Logo"
-            />{' '}
-            <b>Spotify</b> · 1,323,154 likes · <b>50 songs</b>, about 2 hr 30 min
+            <b>{album.likes || 'N/A'} likes</b> · <b>{songs.length} songs</b>
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 sm:grid-cols-4 mt-10 mb-4 px-2 text-[#a7a7a7]">
-        <p>
-          <b className="mr-4">#</b>Title
-        </p>
+        <p><b className="mr-4">#</b>Title</p>
         <p>Album</p>
         <p className="hidden sm:block">Date Added</p>
-        <img className="m-auto w-4" src={assets.clock_icon} alt="Duration Icon" />
+        <p className="text-center">Duration</p>
       </div>
 
       <hr />
-      {songsData.map((item, index) => (
+      {songs.map((item, index) => (
         <div
-          key={index}
-          onClick={() => setTrack(item)} // đổi playWithId thành setTrack trực tiếp bài hát
+          key={item._id}
+          onClick={() => setTrack(item)}
           className="grid grid-cols-3 sm:grid-cols-4 gap-2 p-2 items-center text-[#a7a7a7] hover:bg-[#ffffff2b] cursor-pointer"
         >
           <p className="text-white">
@@ -53,7 +60,7 @@ const DisplayAlbum = () => {
             {item.name}
           </p>
           <p className="text-[15px]">{album.name}</p>
-          <p className="text-[15px] hidden sm:block">5 days ago</p>
+          <p className="text-[15px] hidden sm:block">{new Date(item.dateAdded).toLocaleDateString()}</p>
           <p className="text-[15px] text-center">{item.duration}</p>
         </div>
       ))}
