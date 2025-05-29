@@ -1,16 +1,27 @@
-import React, { useRef, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation, Routes, Route } from 'react-router-dom';
 import DisplayHome from './DisplayHome';
 import DisplayAlbum from './DisplayAlbum';
-import { albumsData } from '../assets/assets';
 
 const Display = () => {
+  const [albums, setAlbums] = useState([]);
   const displayRef = useRef();
   const location = useLocation();
 
+  // Fetch albums từ backend API
+  useEffect(() => {
+    fetch('http://localhost:4000/api/album/list')
+      .then(res => res.json())
+      .then(data => setAlbums(data))
+      .catch(err => console.error('Lỗi lấy albums:', err));
+  }, []);
+
   const isAlbum = location.pathname.includes("album");
   const albumId = isAlbum ? location.pathname.split("/").pop() : null;
-  const bgColor = albumId && albumsData[Number(albumId)]?.bgColor;
+
+  // Giả sử backend trả album có trường bgColor
+  const album = albums.find(a => a._id === albumId);
+  const bgColor = album?.bgColor;
 
   useEffect(() => {
     if (displayRef.current) {
@@ -36,3 +47,4 @@ const Display = () => {
 };
 
 export default Display;
+
