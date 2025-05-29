@@ -11,13 +11,13 @@ const DisplayAlbum = () => {
 
   useEffect(() => {
     // Fetch album info by id
-    fetch(`http://localhost:4000/api/album/${id}`) // backend cần có route lấy album theo id
+    fetch(`http://localhost:4000/api/album`) // backend cần có route lấy album theo id
       .then(res => res.json())
       .then(data => setAlbum(data))
       .catch(err => console.error(err));
 
     // Fetch songs in album
-    fetch(`http://localhost:4000/api/song/list?albumId=${id}`) // backend cần hỗ trợ filter song theo albumId
+    fetch(`http://localhost:4000/api/song/list`) // backend cần hỗ trợ filter song theo albumId
       .then(res => res.json())
       .then(data => setSongs(data))
       .catch(err => console.error(err));
